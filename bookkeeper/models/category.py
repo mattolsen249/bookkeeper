@@ -3,7 +3,7 @@
 """
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Iterator
+from typing import Iterator, Tuple
 
 from ..repository.abstract_repository import AbstractRepository
 
@@ -11,13 +11,19 @@ from ..repository.abstract_repository import AbstractRepository
 @dataclass
 class Category:
     """
-    Категория расходов, хранит название в атрибуте name и ссылку (id) на
-    родителя (категория, подкатегорией которой является данная) в атрибуте parent.
-    У категорий верхнего уровня parent = None
+    Категория расходов, хранит название в атрибуте name,
+    ссылку (id) на себя в атрибуте pk и ссылку на
+    родителя (категория, подкатегорией которой является данная)
+    в атрибуте parent. У категорий верхнего уровня parent = None
     """
-    name: str
-    parent: int | None = None
     pk: int = 0
+    name: str = 'Все'
+    parent: str | None = None
+
+    def __init__(self, attrs: Tuple[str, str | None], pk: int = 0) -> None:
+        self.pk = pk
+        self.name = attrs[0]
+        self.parent = attrs[1]
 
     def get_parent(self,
                    repo: AbstractRepository['Category']) -> 'Category | None':

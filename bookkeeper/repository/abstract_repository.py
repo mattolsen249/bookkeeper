@@ -52,7 +52,7 @@ class AbstractRepository(ABC, Generic[T]):
         """
 
     @abstractmethod
-    def update(self, obj: T) -> None:
+    def update(self, pk: int, attrs: tuple) -> None:
         """ Обновить данные об объекте. Объект должен содержать поле pk. """
 
     @abstractmethod
