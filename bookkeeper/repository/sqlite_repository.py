@@ -6,7 +6,7 @@
 from dataclasses import dataclass
 # from datetime import datetime
 from inspect import get_annotations
-from typing import Any
+from typing import Any, Tuple
 import sqlite3
 
 from bookkeeper.repository.abstract_repository import AbstractRepository, T
@@ -123,24 +123,26 @@ class SQLiteRepository(AbstractRepository[T]):
                     if all(getattr(obj, attr) == where[attr] for attr in
                            where.keys())]
     """
-    def get_all(self, where: dict[str, Any] | None = None) -> list[T]:
+    def get_all(self, attrs: Tuple[str] | None = None) -> list[T]:
         with sqlite3.connect(self.db_file) as con:
             cur = con.cursor()
             cur.execute('PRAGMA foreign_keys = ON')
-            cur.execute(
-                f'SELECT * FROM {self.table_name} WHERE '
-            )
+            if attrs is None:
+                cur.execute(
+                    f'SELECT * FROM {self.table_name}'
+                )
+            else:
+                where = ' AND '.join(attrs)
+                cur.execute(
+                    f'SELECT * FROM {self.table_name} WHERE {where}'
+                )
             tuple_objs = cur.fetchall()
         con.close()
         objs = []
         for tuple_obj in tuple_objs:
             objs.append(self.cls(tuple_obj[1:], pk=tuple_obj[0]))
-        if where is None:
-            return objs
-        else:
-            return [obj for obj in objs
-                    if all(getattr(obj, attr) == where[attr] for attr in
-                           where.keys())]
+        return objs
+
 
     def update(self, pk: int, attrs: tuple) -> None:
         names = list(self.fields.keys())
