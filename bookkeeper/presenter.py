@@ -72,13 +72,12 @@ while True:
                 print('Wrong syntax of command \'add\'')
         elif command_action == 'get_all':
             try:
-                if len(command.split(' ')) == 2:
-                    print('\n'.join([str(item) for item in repo.get_all()]))
+                if len(command_items) < 3:
+                    attrs = None
                 else:
-                    attrs = command_items[2:]
-                    [where_attr, where_value] = attrs
-                    print('\n'.join([str(item) for item in
-                                     repo.get_all({where_attr: where_value})]))
+                    attrs = tuple(command_items[2:])
+                print('\n'.join([str(item) for item in
+                                 repo.get_all(attrs)]))
             except ValueError:
                 print('Error in \'getall\' method')
         elif command_action == 'get':
