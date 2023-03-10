@@ -3,7 +3,7 @@
 """
 from dataclasses import  dataclass
 from collections import defaultdict
-from typing import Iterator, Tuple
+from typing import Iterator, Tuple, List
 
 from ..repository.abstract_repository import AbstractRepository
 
@@ -42,14 +42,15 @@ class Category:
         -------
         Объект класса Category или None
         """
-        if self.parent is None:
+        parent = repo.get_all((f'name=\'{self.parent}\'',))
+        if len(parent) == 0:
             return None
-        repo.get_all()
-        return repo.get(self.parent)
+        else:
+            return parent[0]
 
     def get_all_parents(self,
                         repo: AbstractRepository['Category']
-                        ) -> Iterator['Category']:
+                        ) -> List['Category']:
         """
         Получить все категории верхнего уровня в иерархии.
 
@@ -63,13 +64,18 @@ class Category:
         """
         parent = self.get_parent(repo)
         if parent is None:
-            return
-        yield parent
-        yield from parent.get_all_parents(repo)
+            return []
+        else:
+            return [parent, *parent.get_all_parents(repo)]
 
-    def get_subcategories(self,
-                          repo: AbstractRepository['Category']
-                          ) -> Iterator['Category']:
+    def get_children(self,
+                     repo: AbstractRepository['Category']
+                     ) -> List['Category']:
+        return repo.get_all((f'parent=\'{self.name}\'',))
+
+    def get_all_children(self,
+                         repo: AbstractRepository['Category']
+                         ) -> List['Category']:
         """
         Получить все подкатегории из иерархии, т.е. непосредственные
         подкатегории данной, все их подкатегории и т.д.
@@ -82,47 +88,9 @@ class Category:
         -------
         Объекты Category, являющиеся подкатегориями разного уровня ниже данной.
         """
-
-        def get_children(graph: dict[int | None, list['Category']],
-                         root: int) -> Iterator['Category']:
-            """ dfs in graph from root """
-            for x in graph[root]:
-                yield x
-                yield from get_children(graph, x.pk)
-
-        subcats = defaultdict(list)
-        for cat in repo.get_all():
-            subcats[cat.parent].append(cat)
-        return get_children(subcats, self.pk)
-
-    @classmethod
-    def create_from_tree(
-            cls,
-            tree: list[tuple[str, str | None]],
-            repo: AbstractRepository['Category']) -> list['Category']:
-        """
-        Создать дерево категорий из списка пар "потомок-родитель".
-        Список должен быть топологически отсортирован, т.е. потомки
-        не должны встречаться раньше своего родителя.
-        Проверка корректности исходных данных не производится.
-        При использовании СУБД с проверкой внешних ключей, будет получена
-        ошибка (для sqlite3 - IntegrityError). При отсутствии проверки
-        со стороны СУБД, результат, возможно, будет корректным, если исходные
-        данные корректны за исключением сортировки. Если нет, то нет.
-        "Мусор на входе, мусор на выходе".
-
-        Parameters
-        ----------
-        tree - список пар "потомок-родитель"
-        repo - репозиторий для сохранения объектов
-
-        Returns
-        -------
-        Список созданных объектов Category
-        """
-        created: dict[str, Category] = {}
-        for child, parent in tree:
-            cat = cls(child, created[parent].pk if parent is not None else None)
-            repo.add(cat)
-            created[child] = cat
-        return list(created.values())
+        all_children = []
+        children = self.get_children(repo)
+        for child in children:
+            all_children.append(child)
+            all_children += [*child.get_all_children(repo)]
+        return all_children
