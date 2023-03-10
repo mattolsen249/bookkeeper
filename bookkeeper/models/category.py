@@ -1,14 +1,14 @@
 """
 Модель категории расходов
 """
+from dataclasses import  dataclass
 from collections import defaultdict
-from dataclasses import dataclass
 from typing import Iterator, Tuple
 
 from ..repository.abstract_repository import AbstractRepository
 
 
-@dataclass
+@dataclass(slots=True)
 class Category:
     """
     Категория расходов, хранит название в атрибуте name,
@@ -16,14 +16,17 @@ class Category:
     родителя (категория, подкатегорией которой является данная)
     в атрибуте parent. У категорий верхнего уровня parent = None
     """
-    pk: int = 0
-    name: str = 'Все'
-    parent: str | None = None
+    pk: int
+    name: str
+    parent: str
 
-    def __init__(self, attrs: Tuple[str, str | None], pk: int = 0) -> None:
+    def __init__(self,
+                 args: Tuple[str | None] = ('Все', None),
+                 pk: int = 0) -> None:
         self.pk = pk
-        self.name = attrs[0]
-        self.parent = attrs[1]
+        if args is not None:
+            self.name = args[0]
+            self.parent = args[1]
 
     def get_parent(self,
                    repo: AbstractRepository['Category']) -> 'Category | None':
@@ -41,6 +44,7 @@ class Category:
         """
         if self.parent is None:
             return None
+        repo.get_all()
         return repo.get(self.parent)
 
     def get_all_parents(self,
