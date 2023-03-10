@@ -59,9 +59,8 @@ while True:
         repo = SQLiteRepository('bookkeeper.db', cls)
         if len(command_items[2:]) > 0:
             args = command_items[2:]
-            for arg in args:
-                if arg == 'None' or arg == 'NULL':
-                    arg = None
+            args = tuple(map(lambda x:
+                             None if x == 'None' or x == 'NULL' else x, args))
         else:
             args = None
         if command_action == 'add':
@@ -79,6 +78,10 @@ while True:
         elif command_action == 'get':
             try:
                 print(repo.get(int(args[0])))
+                # print(repo.get(int(args[0])).get_parent(repo))
+                # print('\n'.join([str(item) for item in repo.get(int(args[0])).get_all_parents(repo)]))
+                # print('\n'.join([str(item) for item in (repo.get(int(args[0]))).get_children(repo)]))
+                # print('\n'.join([str(item) for item in repo.get(int(args[0])).get_all_children(repo)]))
             except ValueError:
                 print('Error in \'get\' method')
 
