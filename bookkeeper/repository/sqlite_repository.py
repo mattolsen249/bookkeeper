@@ -3,24 +3,9 @@
 Каждая таблица в БД олицетворяет определенную модель.
 """
 
-from dataclasses import dataclass
-# from datetime import datetime
-from inspect import get_annotations
-from typing import Any, Tuple
+from typing import Tuple
 import sqlite3
-
 from bookkeeper.repository.abstract_repository import AbstractRepository, T
-from bookkeeper.models.category import Category
-
-
-@dataclass
-class Test:
-    """
-    Тестовый класс
-    """
-    name: str
-    # created: 'datetime'
-    pk: int = 0
 
 
 class SQLiteRepository(AbstractRepository[T]):
@@ -41,7 +26,6 @@ class SQLiteRepository(AbstractRepository[T]):
     db_file: str
     cls: type
     table_name: str
-    fields: dict
 
     def __init__(self, db_file: str, cls: type) -> None:
         """
@@ -51,31 +35,30 @@ class SQLiteRepository(AbstractRepository[T]):
         self.db_file = db_file
         self.cls = cls
         self.table_name = cls.__name__.lower()
-        self.fields = get_annotations(cls, eval_str=True)
 
+        self.create_dbtable()
+
+    def create_dbtable(self):
         annotations = list(self.cls.__annotations__.items())
         table_fields = []
         for annotation in annotations:
-            types = 'INT' * int(annotation[1] is int) + \
-                    'REAL' * int(annotation[1] is float) + \
-                    'TEXT' * int(annotation[1] is not int and
-                                 annotation[1] is not float)
-            table_fields.append(f'{str(annotation[0])} {types}')
+            annotation_type = 'INT' * int(annotation[1] is int) + \
+                              'REAL' * int(annotation[1] is float) + \
+                              'TEXT' * int(annotation[1] is not int and
+                                           annotation[1] is not float)
+            table_fields.append(f'{str(annotation[0])} {annotation_type}')
         set_table = ', '.join(table_fields)
         with sqlite3.connect(self.db_file) as con:
             cur = con.cursor()
-            cur.execute('PRAGMA foreign_keys = ON')
-            try:
-                cur.execute(
-                    f'CREATE TABLE {self.table_name} ({set_table})')
-            except sqlite3.OperationalError:
-                pass
+            cur.execute(f'CREATE TABLE IF NOT EXISTS '
+                        f'{self.table_name}({set_table})')
         con.close()
 
     def add(self, obj) -> None:
-        names = ', '.join(self.fields.keys())
-        placeholders = ', '.join("?" * len(self.fields))
-        values = [getattr(obj, x) for x in self.fields]
+        names = ', '.join(self.cls.__annotations__.keys())
+        placeholders = ', '.join("?" * len(self.cls.__annotations__.keys()))
+        values = [getattr(obj, x)
+                  for x in list(self.cls.__annotations__.keys())]
         with sqlite3.connect(self.db_file) as con:
             cur = con.cursor()
             cur.execute('PRAGMA foreign_keys = ON')
@@ -99,40 +82,22 @@ class SQLiteRepository(AbstractRepository[T]):
             )
             tuple_obj = cur.fetchone()
         con.close()
-        obj = self.cls(tuple_obj[1:], pk=tuple_obj[0])
+        if tuple_obj is not None:
+            obj = self.cls(pk=tuple_obj[0], args=tuple_obj[1:])
+        else:
+            obj = None
         return obj
 
-
-    """
-        def get_all(self, where: dict[str, Any] | None = None) -> list[T]:
+    def get_all(self, args: Tuple[str] | None = None) -> list[T]:
         with sqlite3.connect(self.db_file) as con:
             cur = con.cursor()
             cur.execute('PRAGMA foreign_keys = ON')
-            cur.execute(
-                f'SELECT * FROM {self.table_name}'
-            )
-            tuple_objs = cur.fetchall()
-        con.close()
-        objs = []
-        for tuple_obj in tuple_objs:
-            objs.append(self.cls(tuple_obj[1:], pk=tuple_obj[0]))
-        if where is None:
-            return objs
-        else:
-            return [obj for obj in objs
-                    if all(getattr(obj, attr) == where[attr] for attr in
-                           where.keys())]
-    """
-    def get_all(self, attrs: Tuple[str] | None = None) -> list[T]:
-        with sqlite3.connect(self.db_file) as con:
-            cur = con.cursor()
-            cur.execute('PRAGMA foreign_keys = ON')
-            if attrs is None:
+            if args is None:
                 cur.execute(
                     f'SELECT * FROM {self.table_name}'
                 )
             else:
-                where = ' AND '.join(attrs)
+                where = ' AND '.join(args)
                 cur.execute(
                     f'SELECT * FROM {self.table_name} WHERE {where}'
                 )
@@ -140,13 +105,16 @@ class SQLiteRepository(AbstractRepository[T]):
         con.close()
         objs = []
         for tuple_obj in tuple_objs:
-            objs.append(self.cls(tuple_obj[1:], pk=tuple_obj[0]))
+            objs.append(self.cls(pk=tuple_obj[0], args=tuple_obj[1:]))
         return objs
 
-
-    def update(self, pk: int, attrs: tuple) -> None:
-        names = list(self.fields.keys())
-        sets = ', '.join(f'{name} = \'{attrs[names.index(name)]}\''
+    def update(self,
+               args: Tuple[str],
+               pk: int = 0) -> None:
+        names = list(self.cls.__annotations__.keys())
+        names.remove('pk')
+        print(names)
+        sets = ', '.join(f'{name} = \'{args[names.index(name)]}\''
                          for name in names)
         with sqlite3.connect(self.db_file) as con:
             cur = con.cursor()
@@ -164,5 +132,3 @@ class SQLiteRepository(AbstractRepository[T]):
                 f'DELETE FROM {self.table_name} WHERE pk = {pk}'
             )
         con.close()
-
-
