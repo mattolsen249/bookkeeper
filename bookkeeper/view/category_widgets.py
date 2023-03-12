@@ -10,6 +10,9 @@ from bookkeeper.view.accessory_widgets import EditButton
 
 
 class CategoryWidget(QtWidgets.QWidget):
+    """
+    Виджет-таблица с экземплярами модели категории
+    """
     activate_editing_mode_signal = QtCore.Signal(int)
 
     def __init__(self) -> None:
@@ -31,6 +34,9 @@ class CategoryWidget(QtWidgets.QWidget):
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
 
     def set_data(self, categories: list[Category]) -> None:
+        """
+        Получить список категорий
+        """
         self.table.setRowCount(len(categories))
         for i, cat in enumerate(categories):
             self.table.setCellWidget(i, 0,
@@ -40,11 +46,17 @@ class CategoryWidget(QtWidgets.QWidget):
             self.table.setItem(i, 3, QtWidgets.QTableWidgetItem(cat.name))
 
     def set_edit_buttons_active(self, is_active: bool) -> None:
+        """
+        Активировать кнопку "редактировать"
+        """
         for i in range(self.table.rowCount()):
             self.table.cellWidget(i, 0).setDisabled(not is_active)
 
 
 class AddCategoryWidget(QtWidgets.QWidget):
+    """
+    Виджет добавления/изменения/удаления категории
+    """
     cancel_signal = QtCore.Signal()
     delete_signal = QtCore.Signal(int)
     update_signal = QtCore.Signal(Category)
@@ -70,7 +82,7 @@ class AddCategoryWidget(QtWidgets.QWidget):
         self.name_input = QtWidgets.QLineEdit()
         name_layout.addWidget(self.name_input)
 
-        layout.addWidget(QtWidgets.QLabel('Добавить новую категорию'))
+        layout.addWidget(QtWidgets.QLabel('Менеджер категорий'))
         layout.addLayout(name_layout)
         layout.addLayout(parent_layout)
 
@@ -95,6 +107,9 @@ class AddCategoryWidget(QtWidgets.QWidget):
         self.buttons_placeholder.addWidget(self.add_button)
 
     def exec_create(self) -> None:
+        """
+        Создание категории
+        """
         if self.name_input.text() == '' or (
                 self.parent_input.text() != '' and
                 not self.parent_input.text().isnumeric()):
@@ -104,6 +119,9 @@ class AddCategoryWidget(QtWidgets.QWidget):
         self.create_signal.emit(cat)
 
     def exec_update(self) -> None:
+        """
+        Изменение категории
+        """
         if self.name_input.text() == '' or (
                 self.parent_input.text() != '' and
                 not self.parent_input.text().isnumeric()):
@@ -114,6 +132,9 @@ class AddCategoryWidget(QtWidgets.QWidget):
         self.update_signal.emit(self.cur_category)
 
     def activate_editing_mode(self, category: Category) -> None:
+        """
+        Активировать режим изменения категории
+        """
         self.cur_category = category
         self.name_input.setText(category.name)
         parent = str(category.parent) if category.parent is not None else ''
@@ -122,6 +143,9 @@ class AddCategoryWidget(QtWidgets.QWidget):
         self.buttons_placeholder.addLayout(self.edit_buttons_layout)
 
     def deactivate_editing_mode(self) -> None:
+        """
+        Деактивировать режим изменения категории
+        """
         self.cur_category = None
         self.buttons_placeholder.itemAt(0).layout().setParent(None)
         self.buttons_placeholder.addWidget(self.add_button)

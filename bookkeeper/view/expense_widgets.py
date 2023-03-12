@@ -10,6 +10,9 @@ from bookkeeper.view.accessory_widgets import EditButton, DateWidget
 
 
 class ExpensesWidget(QtWidgets.QWidget):
+    """
+    Виджет-таблица с экземплярами модели расхода
+    """
     activate_editing_mode_signal = QtCore.Signal(int)
 
     def __init__(self) -> None:
@@ -18,7 +21,7 @@ class ExpensesWidget(QtWidgets.QWidget):
         self.table = QtWidgets.QTableWidget(20, 5)
 
         layout = QtWidgets.QVBoxLayout(self)
-        layout.addWidget(QtWidgets.QLabel('Текущие расходы'))
+        layout.addWidget(QtWidgets.QLabel('Расходы'))
         layout.addWidget(self.table)
 
         self.table.setHorizontalHeaderLabels(
@@ -30,10 +33,14 @@ class ExpensesWidget(QtWidgets.QWidget):
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
-        self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.table.setEditTriggers(
+            QAbstractItemView.EditTrigger.NoEditTriggers)
 
     def set_data(self, expenses: list[Expense],
                  category_id_name_mapping: dict[int, str]) -> None:
+        """
+        Получить список расходов
+        """
         self.expenses = expenses
         self.table.setRowCount(len(expenses))
         for i, exp in enumerate(expenses):
@@ -45,17 +52,24 @@ class ExpensesWidget(QtWidgets.QWidget):
                                      )
             self.table.setItem(i, 1, QtWidgets.QTableWidgetItem(
                 str(exp.expense_date.date())))
-            self.table.setItem(i, 2, QtWidgets.QTableWidgetItem(str(exp.amount)))
+            self.table.setItem(i, 2, QtWidgets.QTableWidgetItem(
+                str(exp.amount)))
             self.table.setItem(i, 3, QtWidgets.QTableWidgetItem(
                 category_id_name_mapping[exp.category]))
             self.table.setItem(i, 4, QtWidgets.QTableWidgetItem(exp.comment))
 
     def set_edit_buttons_active(self, is_active: bool) -> None:
+        """
+        Активировать кнопку "редактировать"
+        """
         for i in range(self.table.rowCount()):
             self.table.cellWidget(i, 0).setDisabled(not is_active)
 
 
 class AddExpensesWidget(QtWidgets.QWidget):
+    """
+    Виджет добавления/изменения/удаления расхода
+    """
     cancel_signal = QtCore.Signal()
     delete_signal = QtCore.Signal(int)
     update_signal = QtCore.Signal(Expense, str)
@@ -95,7 +109,7 @@ class AddExpensesWidget(QtWidgets.QWidget):
         self.comment_input = QtWidgets.QLineEdit()
         comment_layout.addWidget(self.comment_input)
 
-        layout.addWidget(QtWidgets.QLabel('Добавить новую запись'))
+        layout.addWidget(QtWidgets.QLabel('Менеджер расходов'))
         layout.addLayout(date_layout)
         layout.addLayout(sum_layout)
         layout.addLayout(cat_layout)
@@ -122,7 +136,11 @@ class AddExpensesWidget(QtWidgets.QWidget):
         self.buttons_placeholder.addWidget(self.add_button)
 
     def exec_create(self) -> None:
-        if self.sum_input.text() == '' or not self.sum_input.text().isnumeric():
+        """
+        Создание расхода
+        """
+        if self.sum_input.text() == '' \
+                or not self.sum_input.text().isnumeric():
             return
         exp = Expense(amount=int(self.sum_input.text()),
                       category=0,
@@ -131,7 +149,11 @@ class AddExpensesWidget(QtWidgets.QWidget):
         self.create_signal.emit(exp, self.cat_input.currentText())
 
     def exec_update(self) -> None:
-        if self.sum_input.text() == '' or not self.sum_input.text().isnumeric():
+        """
+        Изменение расхода
+        """
+        if self.sum_input.text() == ''\
+                or not self.sum_input.text().isnumeric():
             return
         self.cur_expense.amount = int(self.sum_input.text())
         self.cur_expense.comment = self.comment_input.text()
@@ -139,6 +161,9 @@ class AddExpensesWidget(QtWidgets.QWidget):
         self.update_signal.emit(self.cur_expense, self.cat_input.currentText())
 
     def activate_editing_mode(self, expense: Expense, cat_name: str) -> None:
+        """
+        Активировать режим изменения расхода
+        """
         self.cur_expense = expense
         self.sum_input.setText(str(expense.amount))
         self.cat_input.setCurrentText(cat_name)
@@ -150,6 +175,9 @@ class AddExpensesWidget(QtWidgets.QWidget):
         self.buttons_placeholder.addLayout(self.edit_buttons_layout)
 
     def deactivate_editing_mode(self) -> None:
+        """
+        Деактивировать режим изменения расхода
+        """
         self.cur_expense = None
         self.buttons_placeholder.itemAt(0).layout().setParent(None)
         self.buttons_placeholder.addWidget(self.add_button)

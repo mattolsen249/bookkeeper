@@ -1,3 +1,7 @@
+"""
+Модуль описывает View
+"""
+
 import sys
 from typing import Callable
 from PySide6 import QtWidgets

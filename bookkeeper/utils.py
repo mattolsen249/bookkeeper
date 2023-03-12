@@ -73,7 +73,7 @@ INIT_CATEGORIES = '''
         Моющие средства
 Услуги
     Медицина
-    Автосервис  
+    Автосервис
 '''.splitlines()
 
 DB_NAME = 'bookkeeper.db'
