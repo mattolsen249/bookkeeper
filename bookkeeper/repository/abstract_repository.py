@@ -44,7 +44,7 @@ class AbstractRepository(ABC, Generic[T]):
         """ Получить объект по id """
 
     @abstractmethod
-    def get_all(self, where: Tuple[str] | None = None) -> list[T]:
+    def get_all(self, where: dict[str, Any] | None = None) -> list[T]:
         """
         Получить все записи по некоторому условию
         where - условие в виде словаря {'название_поля': значение}
@@ -52,7 +52,7 @@ class AbstractRepository(ABC, Generic[T]):
         """
 
     @abstractmethod
-    def update(self, pk: int, attrs: tuple) -> None:
+    def update(self, obj: T) -> None:
         """ Обновить данные об объекте. Объект должен содержать поле pk. """
 
     @abstractmethod

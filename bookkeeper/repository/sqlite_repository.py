@@ -1,134 +1,134 @@
 """
-Модуль описывает репозиторий, взаимодействующий с БД.
-Каждая таблица в БД олицетворяет определенную модель.
+Модуль описывает репозиторий, работающий с SQLite3
 """
 
-from typing import Tuple
 import sqlite3
+from datetime import datetime
+from inspect import get_annotations
+from sqlite3 import Connection
+from types import UnionType
+from typing import Any, get_args
+
 from bookkeeper.repository.abstract_repository import AbstractRepository, T
 
 
 class SQLiteRepository(AbstractRepository[T]):
     """
-    Репозиторий, взаимодействующий с одной из таблиц БД.
-
-    ...
-
-    АТРИБУТЫ
-    ----------
-    db_file: str
-        название файла с БД
-
-    cls: type
-        модель, с объектами котрой работает репозиторий
+    Репозиторий, работающий с SQLite3. Хранит данные в базе данных.
     """
 
-    db_file: str
-    cls: type
-    table_name: str
-
     def __init__(self, db_file: str, cls: type) -> None:
-        """
-        db_file - имя файла с базой данных
-        cls - модель
-        """
         self.db_file = db_file
-        self.cls = cls
         self.table_name = cls.__name__.lower()
+        self.fields = get_annotations(cls, eval_str=True)
+        self.fields.pop('pk')
+        self.cls = cls
 
-        self.create_dbtable()
+        definition_strings = [
+            f'{f_name} {self.__class__._resolve_type(f_type)}'
+            for f_name, f_type in self.fields.items()
+        ]
 
-    def create_dbtable(self):
-        annotations = list(self.cls.__annotations__.items())
-        table_fields = []
-        for annotation in annotations:
-            annotation_type = 'INT' * int(annotation[1] is int) + \
-                              'REAL' * int(annotation[1] is float) + \
-                              'TEXT' * int(annotation[1] is not int and
-                                           annotation[1] is not float)
-            table_fields.append(f'{str(annotation[0])} {annotation_type}')
-        set_table = ', '.join(table_fields)
-        with sqlite3.connect(self.db_file) as con:
-            cur = con.cursor()
-            cur.execute(f'CREATE TABLE IF NOT EXISTS '
-                        f'{self.table_name}({set_table})')
-        con.close()
+        create_sql = f'CREATE TABLE IF NOT EXISTS {self.table_name} (' \
+            + f'{", ".join(definition_strings + ["pk INTEGER PRIMARY KEY"])}' \
+            + ')'
 
-    def add(self, obj) -> None:
-        names = ', '.join(self.cls.__annotations__.keys())
-        placeholders = ', '.join("?" * len(self.cls.__annotations__.keys()))
-        values = [getattr(obj, x)
-                  for x in list(self.cls.__annotations__.keys())]
-        with sqlite3.connect(self.db_file) as con:
+        with self.connect() as con:
             cur = con.cursor()
             cur.execute('PRAGMA foreign_keys = ON')
-            cur.execute(
-                f'INSERT INTO {self.table_name} ({names}) '
-                f'VALUES ({placeholders})', values
-            )
-            obj.pk = cur.lastrowid
-            cur.execute(
-                f'UPDATE {self.table_name} SET pk = {obj.pk} '
-                f'WHERE ROWID = {obj.pk}'
-            )
+            cur.execute(create_sql)
         con.close()
+
+    def connect(self) -> Connection:
+        return sqlite3.connect(
+            self.db_file,
+            detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
+
+    @staticmethod
+    def _resolve_type(obj_type: type) -> str:
+        if issubclass(UnionType, obj_type):
+            obj_type = get_args(obj_type)
+        if issubclass(str, obj_type):
+            return 'TEXT'
+        if issubclass(int, obj_type):
+            return 'INTEGER'
+        if issubclass(float, obj_type):
+            return 'REAL'
+        if issubclass(datetime, obj_type):
+            return 'TIMESTAMP'
+        return 'TEXT'
+
+    def add(self, obj: T) -> int:
+        if getattr(obj, 'pk', None) != 0:
+            raise ValueError(f'trying to add object {obj} with filled `pk` attribute')
+        names = ', '.join(self.fields.keys())
+        place_holder = ', '.join("?" * len(self.fields))
+        values = [getattr(obj, x) for x in self.fields]
+        with self.connect() as con:
+            cur = con.cursor()
+            if len(self.fields) != 0:
+                cur.execute(
+                    f'INSERT INTO {self.table_name} ({names}) VALUES ({place_holder})',
+                    values
+                )
+            else:  # specific case for table with only pk column
+                cur.execute(f'INSERT INTO {self.table_name} DEFAULT VALUES')
+            pk = cur.lastrowid
+            obj.pk = pk if pk is not None else 0
+        con.close()
+        return obj.pk
 
     def get(self, pk: int) -> T | None:
-        with sqlite3.connect(self.db_file) as con:
+        with self.connect() as con:
             cur = con.cursor()
-            cur.execute('PRAGMA foreign_keys = ON')
             cur.execute(
-                f'SELECT * FROM {self.table_name} WHERE pk = {pk}'
+                f'SELECT * FROM {self.table_name} WHERE pk = ?',
+                [pk]
             )
-            tuple_obj = cur.fetchone()
+            res = cur.fetchall()
         con.close()
-        if tuple_obj is not None:
-            obj = self.cls(pk=tuple_obj[0], args=tuple_obj[1:])
-        else:
-            obj = None
-        return obj
+        return self.cls(*res[0]) if len(res) != 0 else None
 
-    def get_all(self, args: Tuple[str] | None = None) -> list[T]:
-        with sqlite3.connect(self.db_file) as con:
+    def get_all(self, where: dict[str, Any] | None = None) -> list[T]:
+        with self.connect() as con:
             cur = con.cursor()
-            cur.execute('PRAGMA foreign_keys = ON')
-            if args is None:
-                cur.execute(
-                    f'SELECT * FROM {self.table_name}'
-                )
-            else:
-                where = ' AND '.join(args)
-                cur.execute(
-                    f'SELECT * FROM {self.table_name} WHERE {where}'
-                )
-            tuple_objs = cur.fetchall()
+            cur.execute(
+                f'SELECT * FROM {self.table_name}'
+            )
+            argss = cur.fetchall()
         con.close()
-        objs = []
-        for tuple_obj in tuple_objs:
-            objs.append(self.cls(pk=tuple_obj[0], args=tuple_obj[1:]))
+        objs = [self.cls(*args) for args in argss]
+        if where is not None:
+            objs = [obj for obj in objs
+                    if all(getattr(obj, attr) == value
+                           for attr, value in where.items())]
         return objs
 
-    def update(self,
-               args: Tuple[str],
-               pk: int = 0) -> None:
-        names = list(self.cls.__annotations__.keys())
-        names.remove('pk')
-        print(names)
-        sets = ', '.join(f'{name} = \'{args[names.index(name)]}\''
-                         for name in names)
-        with sqlite3.connect(self.db_file) as con:
+    def update(self, obj: T) -> None:
+        if obj.pk == 0:
+            raise ValueError('attempt to update object'
+                             'with unknown primary key')
+        update_strings = [f'{name} = ?' for name in self.fields.keys()]
+        if len(update_strings) == 0:
+            return
+        values = [getattr(obj, x) for x in self.fields]
+        with self.connect() as con:
             cur = con.cursor()
-            cur.execute('PRAGMA foreign_keys = ON')
             cur.execute(
-                f'UPDATE {self.table_name} SET {sets} WHERE pk = {pk}'
+                f'UPDATE {self.table_name} SET '
+                f'{", ".join(update_strings)} WHERE pk = ?',
+                values + [obj.pk]
             )
         con.close()
 
     def delete(self, pk: int) -> None:
-        with sqlite3.connect(self.db_file) as con:
+        with self.connect() as con:
             cur = con.cursor()
-            cur.execute('PRAGMA foreign_keys = ON')
             cur.execute(
-                f'DELETE FROM {self.table_name} WHERE pk = {pk}'
+                f'DELETE FROM {self.table_name} WHERE pk = ?',
+                [pk]
             )
+            deleted_count = cur.rowcount
         con.close()
+        if deleted_count == 0:
+            raise KeyError('attempt to delete unexistent object')

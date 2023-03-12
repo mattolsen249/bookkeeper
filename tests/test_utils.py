@@ -71,3 +71,19 @@ def test_with_file():
             ('child2', 'parent1'),
             ('parent2', None)
         ]
+
+
+INIT_CATEGORIES = '''
+Товары
+    Продукты
+        Мясо
+        Овощи
+        Фрукты
+    Хозтовары
+        Моющие средства
+Услуги
+    Медицина
+    Автосервис  
+'''.splitlines()
+
+DB_NAME = 'bookkeeper.db'
