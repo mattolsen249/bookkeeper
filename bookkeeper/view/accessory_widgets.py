@@ -1,3 +1,10 @@
+"""
+Модуль описывает дополнительные виджеты:
+DateWidget - виджет выбора даты в виде календаря,
+EditButton - кнопка редактирования в таблице экземпляров какой-либо модели,
+BudgetWidget - таблица соответствия расходов бюджету,
+"""
+
 from PySide6 import QtWidgets, QtCore, QtGui
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtWidgets import QHeaderView
@@ -20,7 +27,7 @@ class DateWidget(QtWidgets.QDateEdit):
 
 class EditButton(QtWidgets.QPushButton):
     """
-    Кнопка редактирования
+    Кнопка редактирования в таблице экземпляров какой-либо модели
     """
     edit_icon = None
 
@@ -44,6 +51,9 @@ class EditButton(QtWidgets.QPushButton):
 
 
 class BudgetWidget(QtWidgets.QWidget):
+    """
+    Таблица текущих расходов и таблица соответствия расходов бюджету
+    """
     def __init__(self) -> None:
         super().__init__()
         self.table = QtWidgets.QTableWidget(3, 2)
@@ -73,6 +83,9 @@ class BudgetWidget(QtWidgets.QWidget):
             self.table.item(2, 0).flags() & ~QtCore.Qt.ItemFlag.ItemIsEditable)
 
     def set_budgets(self, budgets: list[Budget]) -> None:
+        """
+        Заполнение столбца "Бюджет"
+        """
         self.budgets = budgets[:3]
         for_day = budgets[0]
         for_week = budgets[1]
@@ -84,8 +97,11 @@ class BudgetWidget(QtWidgets.QWidget):
         self.table.setItem(2, 1, QtWidgets.QTableWidgetItem(
             str(for_month.amount) if for_month else ''))
 
-    def set_expenses(self, expenses: list[int]) -> None:
-        for_day, for_week, for_month = expenses[:3]
+    def set_expenses(self, expenses_amount: list[int]) -> None:
+        """
+        Заполнение столбца "Сумма"
+        """
+        for_day, for_week, for_month = expenses_amount[:3]
         self.table.setItem(0, 0, QtWidgets.QTableWidgetItem(str(for_day)))
         self.table.setItem(1, 0, QtWidgets.QTableWidgetItem(str(for_week)))
         self.table.setItem(2, 0, QtWidgets.QTableWidgetItem(str(for_month)))

@@ -40,6 +40,9 @@ class SQLiteRepository(AbstractRepository[T]):
         con.close()
 
     def connect(self) -> Connection:
+        """
+        Подключение к БД через sqlite3
+        """
         return sqlite3.connect(
             self.db_file,
             detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)

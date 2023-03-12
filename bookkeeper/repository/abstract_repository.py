@@ -8,7 +8,7 @@
 """
 
 from abc import ABC, abstractmethod
-from typing import Generic, TypeVar, Protocol, Any, Tuple
+from typing import Generic, TypeVar, Protocol, Any
 
 
 class Model(Protocol):  # pylint: disable=too-few-public-methods

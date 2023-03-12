@@ -1,3 +1,7 @@
+"""
+Модуль описывает виджеты, связанные с расходами
+"""
+
 from PySide6 import QtWidgets, QtCore
 from PySide6.QtWidgets import QHeaderView, QAbstractItemView
 

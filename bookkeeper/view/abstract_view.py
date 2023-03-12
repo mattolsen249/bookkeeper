@@ -21,25 +21,21 @@ class AbstractView(Protocol):
         """
         Показ окна и запуск приложения
         """
-        pass
 
     def set_budget_list(self, budgets: list[Budget]) -> None:
         """
         Получение списка бюджетов
         """
-        pass
 
     def set_category_list(self, categories: list[Category]) -> None:
         """
         Получение списка категорий
         """
-        pass
 
     def set_expense_list(self, expenses: list[Expense]) -> None:
         """
         Получение списка расходов
         """
-        pass
 
     def register_budget_creator(self,
                                 handler: Callable[[Budget], int]) -> None:
@@ -47,7 +43,6 @@ class AbstractView(Protocol):
         "Регистрация" handler в качестве обработчика
         создания экземпляра модели бюджета
         """
-        pass
 
     def register_budget_updater(self,
                                 handler: Callable[[Budget], None]) -> None:
@@ -55,7 +50,6 @@ class AbstractView(Protocol):
         "Регистрация" handler в качестве обработчика
         изменения экземпляра модели бюджета.
         """
-        pass
 
     def register_budget_deleter(self,
                                 handler: Callable[[int], None]) -> None:
@@ -63,7 +57,6 @@ class AbstractView(Protocol):
         "Регистрация" handler в качестве обработчика
         удаления экземпляра модели бюджета.
         """
-        pass
 
     def register_category_creator(self,
                                   handler: Callable[[Category], int]) -> None:
@@ -71,7 +64,6 @@ class AbstractView(Protocol):
         "Регистрация" handler в качестве обработчика
         создания экземпляра модели категории.
         """
-        pass
 
     def register_category_updater(self,
                                   handler: Callable[[Category], None]) -> None:
@@ -79,7 +71,6 @@ class AbstractView(Protocol):
         "Регистрация" handler в качестве обработчика
         зменения экземпляра модели категории.
         """
-        pass
 
     def register_category_deleter(self,
                                   handler: Callable[[int], None]) -> None:
@@ -87,7 +78,6 @@ class AbstractView(Protocol):
         "Регистрация" handler в качестве обработчика
         удаления экземпляра модели категории.
         """
-        pass
 
     def register_expense_creator(self,
                                  handler: Callable[[Expense], int]) -> None:
@@ -95,7 +85,6 @@ class AbstractView(Protocol):
         "Регистрация" handler в качестве обработчика
         создания экземпляра модели расхода.
         """
-        pass
 
     def register_expense_updater(self,
                                  handler: Callable[[Expense], None]) -> None:
@@ -103,7 +92,6 @@ class AbstractView(Protocol):
         "Регистрация" handler в качестве обработчика
         изменения экземпляра модели расхода.
         """
-        pass
 
     def register_expense_deleter(self,
                                  handler: Callable[[int], None]) -> None:
@@ -111,4 +99,3 @@ class AbstractView(Protocol):
         "Регистрация" handler в качестве обработчика
         удаления экземпляра модели расхода.
         """
-        pass
